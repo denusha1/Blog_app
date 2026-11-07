@@ -9,7 +9,10 @@ import org.springframework.data.repository.query.Param;
 public interface AuthorFollowRepository extends JpaRepository<AuthorFollow, Long> {
     Optional<AuthorFollow> findByAuthorIdAndFollowerId(Long authorId, Long followerId);
     long countByAuthorId(Long authorId);
+    long countByFollowerId(Long followerId);
     void deleteByAuthorIdAndFollowerId(Long authorId, Long followerId);
     @Query("select f from AuthorFollow f join fetch f.author where f.follower.id=:followerId order by f.createdAt desc")
     List<AuthorFollow> findDetailedByFollowerId(@Param("followerId") Long followerId);
+    @Query("select f from AuthorFollow f join fetch f.follower where f.author.id=:authorId")
+    List<AuthorFollow> findDetailedFollowersByAuthorId(@Param("authorId") Long authorId);
 }

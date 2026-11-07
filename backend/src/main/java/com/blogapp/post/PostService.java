@@ -3,6 +3,8 @@ package com.blogapp.post;
 import com.blogapp.common.ApiException;
 import com.blogapp.user.AppUser;
 import com.blogapp.user.UserRepository;
+import com.blogapp.user.AuthorFollowRepository;
+import com.blogapp.user.NotificationService;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Locale;
@@ -17,7 +19,17 @@ import org.springframework.stereotype.Service;
 public class PostService {
     private final PostRepository posts;
     private final UserRepository users;
-    public PostService(PostRepository posts, UserRepository users) { this.posts = posts; this.users = users; }
+    private final PostViewRepository views;
+    private final PostReactionRepository reactions;
+    private final PostCommentRepository comments;
+    private final AuthorFollowRepository follows;
+    private final NotificationService notifications;
+    public PostService(PostRepository posts, UserRepository users, PostViewRepository views,
+                       PostReactionRepository reactions, PostCommentRepository comments,
+                       AuthorFollowRepository follows, NotificationService notifications) {
+        this.posts = posts; this.users = users; this.views=views; this.reactions=reactions; this.comments=comments;
+        this.follows=follows; this.notifications=notifications;
+    }
 
     public PostDtos.PageResponse<PostDtos.PostResponse> list(String query, String category, String tag, String author,
             Instant fromDate, Instant toDate, String sort, int page, int size) {
@@ -68,6 +80,7 @@ public class PostService {
         BlogPost post = posts.findDetailedById(id).filter(this::isPublicPost)
                 .orElseThrow(() -> ApiException.notFound("Post not found"));
         post.recordView();
+        views.save(new PostView(post));
     }
 
     public List<PostDtos.PostResponse> mine(String username) {
@@ -77,12 +90,23 @@ public class PostService {
 
     public PostDtos.Stats stats(String username) {
         AppUser author = user(username);
+        List<BlogPost> authorPosts=posts.findDetailedByAuthorId(author.getId());
         List<PostDtos.MonthCount> months = posts.monthlyPostCounts(author.getId()).stream()
                 .map(row -> new PostDtos.MonthCount((String) row[0], ((Number) row[1]).longValue())).toList();
+        List<PostDtos.MonthCount> readership=views.monthlyViews(author.getId()).stream()
+                .map(row -> new PostDtos.MonthCount((String) row[0], ((Number) row[1]).longValue())).toList();
         long count = posts.countByAuthorId(author.getId());
+        long totalViews=authorPosts.stream().mapToLong(BlogPost::getViewCount).sum();
+        long likes=reactions.countForAuthor(author.getId());
+        long commentsCount=comments.countForAuthor(author.getId());
+        List<PostDtos.PostResponse> popular=authorPosts.stream().filter(p -> p.getStatus().equals("PUBLISHED"))
+                .sorted(java.util.Comparator.comparingLong(BlogPost::getViewCount).reversed()).limit(5)
+                .map(PostDtos.PostResponse::from).toList();
+        double engagement=totalViews==0?0:Math.round((likes+commentsCount)*10000.0/totalViews)/100.0;
         return new PostDtos.Stats(count, posts.countByAuthorIdAndStatus(author.getId(), "PUBLISHED"),
                 posts.countByAuthorIdAndStatus(author.getId(), "DRAFT"),
-                posts.countByAuthorIdAndStatus(author.getId(), "SCHEDULED"), months);
+                posts.countByAuthorIdAndStatus(author.getId(), "SCHEDULED"), months,totalViews,likes,
+                commentsCount,engagement,readership,popular);
     }
 
     @Transactional
@@ -91,15 +115,18 @@ public class PostService {
         validateSaveRequest(request);
         BlogPost saved = posts.save(new BlogPost(author, request.title().trim(), request.content().trim(), request.category(),
                 request.imageUrl(), normalizeTags(request.tags()), request.status(), request.visibility(), request.featured(), request.scheduledAt()));
+        if(isPublicPost(saved)) notifyFollowers(saved);
         return PostDtos.PostResponse.from(saved);
     }
 
     @Transactional
     public PostDtos.PostResponse update(String username, Long id, PostDtos.SaveRequest request) {
         BlogPost post = ownedPost(username, id);
+        boolean wasPublic=isPublicPost(post);
         validateSaveRequest(request);
         post.update(request.title().trim(), request.content().trim(), request.category(), request.imageUrl(), normalizeTags(request.tags()),
                 request.status(), request.visibility(), request.featured(), request.scheduledAt());
+        if(!wasPublic && isPublicPost(post)) notifyFollowers(post);
         return PostDtos.PostResponse.from(post);
     }
 
@@ -115,7 +142,7 @@ public class PostService {
     @Transactional
     public int publishScheduledPosts() {
         List<BlogPost> ready = posts.findScheduledToPublish(java.time.Instant.now());
-        ready.forEach(BlogPost::publishScheduled);
+        ready.forEach(post -> { post.publishScheduled(); if(isPublicPost(post)) notifyFollowers(post); });
         return ready.size();
     }
 
@@ -146,6 +173,11 @@ public class PostService {
     private boolean isPublicPost(BlogPost post) {
         return post.getStatus().equals("PUBLISHED") && post.getVisibility().equals("PUBLIC") &&
                 (post.getPublishedAt() == null || !post.getPublishedAt().isAfter(Instant.now()));
+    }
+
+    private void notifyFollowers(BlogPost post) {
+        follows.findDetailedFollowersByAuthorId(post.getAuthor().getId()).forEach(follow ->
+                notifications.create(follow.getFollower(),post.getAuthor(),post,"NEW_POST"));
     }
 
     private AppUser user(String username) {

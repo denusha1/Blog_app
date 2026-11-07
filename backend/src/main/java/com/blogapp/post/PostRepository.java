@@ -63,4 +63,9 @@ public interface PostRepository extends JpaRepository<BlogPost, Long> {
             "from blog_posts where user_id = :userId and status = 'PUBLISHED' and created_at >= date_trunc('month', current_date) - interval '5 months' " +
             "group by date_trunc('month', created_at) order by date_trunc('month', created_at)", nativeQuery = true)
     List<Object[]> monthlyPostCounts(@Param("userId") Long userId);
+
+    @Query("select distinct p.category from BlogPost p order by p.category")
+    List<String> allCategories();
+    @Query("select coalesce(sum(p.viewCount),0) from BlogPost p")
+    long totalPlatformViews();
 }

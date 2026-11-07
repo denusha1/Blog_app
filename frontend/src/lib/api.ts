@@ -1,6 +1,6 @@
 import type { Post, PostPage, Stats, User } from "@/lib/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/blog-api";
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
@@ -18,7 +18,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, { ...init, headers, cache: "no-store" });
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    throw new ApiError(payload?.message ?? "Something went wrong. Please try again.", response.status);
+    const message = payload?.message ?? payload?.detail ?? payload?.error;
+    throw new ApiError(typeof message === "string" && message.length ? message : `Request failed (${response.status}). Please try again.`, response.status);
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
@@ -45,3 +46,6 @@ export const getPublicTags = () => api<string[]>("/posts/tags");
 export const getRelatedPosts = (id: string) => api<Post[]>(`/posts/${id}/related`);
 export const getBookmarks = () => api<Post[]>("/bookmarks");
 export const getFollowing = () => api<{ id: number; username: string; followedAt: string }[]>("/authors/following");
+export type NotificationItem = { id:number; type:string; actorName:string; postId:number|null; postTitle:string|null; createdAt:string; readAt:string|null };
+export const getNotifications = () => api<NotificationItem[]>("/notifications");
+export const getUnreadNotificationCount = () => api<number>("/notifications/unread-count");

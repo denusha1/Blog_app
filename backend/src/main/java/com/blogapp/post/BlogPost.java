@@ -81,6 +81,14 @@ public class BlogPost {
         this.scheduledAt = null;
         this.updatedAt = Instant.now();
     }
+    public void moderate(boolean approved) {
+        this.status=approved?"PUBLISHED":"DRAFT";
+        this.visibility="PUBLIC";
+        this.publishedAt=approved?Instant.now():null;
+        this.scheduledAt=null;
+        this.updatedAt=Instant.now();
+    }
+    public void setCategory(String category){if(category!=null&&!category.isBlank())this.category=category.trim();this.updatedAt=Instant.now();}
 
     public void recordView() { this.viewCount++; }
 

@@ -11,4 +11,6 @@ public interface PostCommentRepository extends JpaRepository<PostComment, Long> 
     List<PostComment> findAllForPost(@Param("postId") Long postId);
     Optional<PostComment> findByIdAndPostId(Long id, Long postId);
     long countByPostId(Long postId);
+    @Query("select count(c) from PostComment c where c.post.author.id=:authorId and c.deleted=false")
+    long countForAuthor(@Param("authorId") Long authorId);
 }

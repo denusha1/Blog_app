@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Search, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Eye, Search, Sparkles } from "lucide-react";
 import { getPosts, getTrendingPosts, getLatestPosts, getPublicTags } from "@/lib/api";
 import { PostCard, PostSkeleton } from "@/components/post-card";
 import { useAuth } from "@/components/providers";
@@ -10,7 +10,8 @@ import type { PostPage } from "@/lib/types";
 
 function DiscoveryRow({ title, posts }: { title: string; posts: import("@/lib/types").Post[] }) {
   if (!posts.length) return null;
-  return <section className="discovery-row"><h3>{title}</h3><div className="discovery-list">{posts.slice(0, 4).map(post => <Link key={post.id} href={`/posts/${post.id}`}><strong>{post.title}</strong><span>{post.authorName} · {post.viewCount ?? 0} reads</span></Link>)}</div></section>;
+  const trendingRow=title.toLowerCase().includes("trending");
+  return <section className={trendingRow?"discovery-row discovery-trending":"discovery-row discovery-latest"}><div className="discovery-row-heading"><div><div className="section-kicker">{trendingRow?"RISING STORIES":"JUST PUBLISHED"}</div><h3>{title}</h3></div>{trendingRow&&<span className="discovery-dual-mark"><i/><i/></span>}</div><div className="discovery-list">{posts.slice(0, 4).map((post,index) => <Link key={post.id} href={`/posts/${post.id}`}><span className="discovery-rank">{String(index+1).padStart(2,"0")}</span><strong>{post.title}</strong><span className="discovery-item-meta">{post.authorName} <b>·</b> <Eye size={13}/> {post.viewCount.toLocaleString()} reads</span><span className="discovery-item-arrow"><ArrowUpRight size={15}/></span></Link>)}</div></section>;
 }
 
 export default function HomePage() {
@@ -40,6 +41,8 @@ export default function HomePage() {
 
   useEffect(() => { getPublicTags().then(setTags).catch(() => {}); getTrendingPosts().then(setTrending).catch(() => {}); getLatestPosts().then(setLatest).catch(() => {}); }, []);
 
+  const spotlight = trending.find(post => post.featured) ?? trending[0] ?? latest[0] ?? null;
+
   function search(event: React.FormEvent) {
     event.preventDefault();
     setPage(0);
@@ -49,23 +52,35 @@ export default function HomePage() {
   return <>
     <section className="hero">
       <div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" />
-      <div className="eyebrow"><Sparkles size={14} /> A home for thoughtful writing</div>
-      <h1>Stories worth <em>sharing.</em></h1>
-      <p className="hero-copy">A quiet corner of the internet for curious minds. Discover new perspectives, find your people, and put your ideas into words.</p>
-      <div className="hero-cta">
-        <Link href={user ? "/posts/new" : "/register"} className="button button-dark">Start writing <ArrowRight size={16} /></Link>
-        <a href="#stories" className="button button-light">Explore stories</a>
+      <div className="hero-inner">
+        <div className="hero-copy-column">
+          <div className="eyebrow"><Sparkles size={14} /> A home for thoughtful writing</div>
+          <h1><span>Stories worth</span><em>sharing.</em></h1>
+          <p className="hero-copy">A quiet corner of the internet for curious minds. Discover new perspectives, find your people, and put your ideas into words.</p>
+          <div className="hero-cta">
+            <Link href={user ? "/posts/new" : "/register"} className="button button-dark">Start writing <ArrowRight size={16} /></Link>
+            <a href="#stories" className="button button-light">Explore stories</a>
+          </div>
+          <p className="hero-note">Good ideas deserve a place to grow.</p>
+        </div>
+        <div className="hero-feature-wrap">
+          {spotlight ? <Link href={`/posts/${spotlight.id}`} className="hero-feature" aria-label={`Read featured story: ${spotlight.title}`}>
+            {spotlight.imageUrl ? <img src={spotlight.imageUrl} alt="" /> : <div className="hero-feature-art"><span className="art-orb art-orb-blue"/><span className="art-orb art-orb-rose"/><span className="art-line art-line-one"/><span className="art-line art-line-two"/><Sparkles size={32}/></div>}
+            <span className="hero-feature-shade"/><span className="hero-feature-label"><i/> Featured story</span>
+            <span className="hero-feature-title"><strong>{spotlight.title}</strong><small>{spotlight.authorName} <span>·</span> {spotlight.viewCount.toLocaleString()} reads</small></span>
+            <span className="hero-feature-arrow"><ArrowRight size={17}/></span>
+          </Link> : <div className="hero-feature hero-feature-placeholder"><div className="hero-feature-art"><span className="art-orb art-orb-blue"/><span className="art-orb art-orb-rose"/><span className="art-line art-line-one"/><span className="art-line art-line-two"/><Sparkles size={32}/></div><span className="hero-feature-shade"/><span className="hero-feature-label"><i/> A space for your next idea</span><span className="hero-feature-title"><strong>Your story belongs here.</strong><small>Be the first to share a new perspective.</small></span></div>}
+        </div>
       </div>
-      <p className="hero-note">Good ideas deserve a place to grow.</p>
     </section>
     <main id="stories" className="shell feed-section">
       <div className="section-top">
-        <div><div className="section-kicker">The journal</div><h2>Fresh perspectives</h2><p className="feed-subtitle">Small ideas. Big new ways of seeing.</p></div>
+        <div><div className="section-kicker">The journal</div><h2>{category?`${category} stories`:"Fresh perspectives"}</h2><p className="feed-subtitle">{category?`A handpicked stream of new perspectives in ${category.toLowerCase()}.`:"Small ideas. Big new ways of seeing."}</p></div>
         <form className="search-box" onSubmit={search}><Search size={17} /><input aria-label="Search stories" placeholder="Search stories..." value={query} onChange={event => setQuery(event.target.value)} /></form>
       </div>
       <div className="category-filter" aria-label="Filter by category">{["", "Ideas", "Design", "Culture", "Travel", "Life", "Writing"].map(item => <button key={item || "all"} className={category === item ? "filter-chip active" : "filter-chip"} aria-pressed={category === item} onClick={() => { setPage(0); setCategory(item); }}>{item || "Everything"}</button>)}</div>
       <div className="discovery-filters"><select aria-label="Sort stories" value={sort} onChange={e => setSort(e.target.value)}><option value="latest">Latest</option><option value="trending">Trending</option></select><select aria-label="Filter by tag" value={tag} onChange={e => setTag(e.target.value)}><option value="">All tags</option>{tags.map(value => <option key={value}>{value}</option>)}</select><input aria-label="Author username" placeholder="Author username" value={author} onChange={e => setAuthor(e.target.value)} /><label>From <input type="date" value={from} onChange={e => setFrom(e.target.value)} /></label><label>To <input type="date" value={to} onChange={e => setTo(e.target.value)} /></label></div>
-      {!submittedQuery && !tag && !author && !from && !to && <><DiscoveryRow title="Trending this week" posts={trending} /><DiscoveryRow title="Latest articles" posts={latest} /></>}
+      {!submittedQuery && !category && !tag && !author && !from && !to && <><DiscoveryRow title="Trending this week" posts={trending} /><DiscoveryRow title="Latest articles" posts={latest} /></>}
       {loading ? <div className="post-grid">{Array.from({ length: 6 }, (_, index) => <PostSkeleton key={index} />)}</div> : error ?
         <div className="form-error">{error}</div> : data?.content.length ? <>
           <div className="post-grid">{data.content.map(post => <PostCard key={post.id} post={post} />)}</div>

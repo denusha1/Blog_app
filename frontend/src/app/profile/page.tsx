@@ -12,6 +12,10 @@ export default function ProfilePage() {
   const { user, loading, acceptAuth, logout } = useAuth();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [socialLinks, setSocialLinks] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -19,7 +23,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (user) { setUsername(user.username); setEmail(user.email); }
+    if (user) { setUsername(user.username); setEmail(user.email); setBio(user.bio ?? ""); setAvatarUrl(user.avatarUrl ?? ""); setWebsiteUrl(user.websiteUrl ?? ""); setSocialLinks(user.socialLinks ?? ""); }
     else if (!loading) router.replace("/login");
   }, [user, loading, router]);
 
@@ -28,7 +32,7 @@ export default function ProfilePage() {
   async function saveProfile(event: React.FormEvent) {
     event.preventDefault(); setError(""); setMessage(""); setSaving(true);
     try {
-      const response = await api<AuthResponse>("/auth/me", { method: "PUT", body: JSON.stringify({ username, email }) });
+      const response = await api<AuthResponse>("/auth/me", { method: "PUT", body: JSON.stringify({ username, email,bio,avatarUrl,websiteUrl,socialLinks }) });
       acceptAuth(response); setMessage("Your profile has been updated.");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update profile"); }
     finally { setSaving(false); }
@@ -53,7 +57,7 @@ export default function ProfilePage() {
     <div className="page-heading"><div className="section-kicker">Account</div><h1>Your profile</h1><p>Keep your details up to date and your account secure.</p></div>
     {message && <div className="form-success">{message}</div>}{error && <div className="form-error">{error}</div>}
     <div className="dashboard-grid">
-      <form className="panel" onSubmit={saveProfile}><h2>Personal details</h2><div className="field"><label htmlFor="username">Username</label><input id="username" minLength={3} maxLength={50} required value={username} onChange={e => setUsername(e.target.value)} /></div><div className="field"><label htmlFor="email">Email</label><input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div><button disabled={saving} className="button button-dark button-small"><Save size={15} /> Save profile</button></form>
+      <form className="panel" onSubmit={saveProfile}><h2>Author profile</h2><div className="field"><label htmlFor="username">Username</label><input id="username" minLength={3} maxLength={50} required value={username} onChange={e => setUsername(e.target.value)} /></div><div className="field"><label htmlFor="email">Email</label><input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} /></div><div className="field"><label htmlFor="avatarUrl">Profile picture URL</label><input id="avatarUrl" type="url" maxLength={1000} value={avatarUrl} onChange={e=>setAvatarUrl(e.target.value)} placeholder="https://…" /></div><div className="field"><label htmlFor="bio">Bio</label><textarea id="bio" maxLength={500} value={bio} onChange={e=>setBio(e.target.value)} placeholder="Tell readers about yourself" /></div><div className="field"><label htmlFor="websiteUrl">Website</label><input id="websiteUrl" type="url" value={websiteUrl} onChange={e=>setWebsiteUrl(e.target.value)} placeholder="https://…" /></div><div className="field"><label htmlFor="socialLinks">Social links</label><input id="socialLinks" value={socialLinks} onChange={e=>setSocialLinks(e.target.value)} placeholder="Comma-separated profile URLs" /></div><button disabled={saving} className="button button-dark button-small"><Save size={15} /> Save profile</button></form>
       <form className="panel" onSubmit={changePassword}><h2>Change password</h2><div className="field"><label htmlFor="current">Current password</label><input id="current" type="password" required value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></div><div className="field"><label htmlFor="next">New password</label><input id="next" type="password" required minLength={8} value={newPassword} onChange={e => setNewPassword(e.target.value)} /><div className="field-hint">At least 8 characters, with uppercase, lowercase and a number.</div></div><button disabled={saving} className="button button-light button-small"><ShieldCheck size={15} /> Update password</button></form>
     </div>
     <section className="panel" style={{ marginTop: 18, borderColor: "var(--line)" }}><h2>Delete account</h2><p style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6 }}>Your account and all published stories will be permanently removed.</p><button className="danger-button" onClick={deleteAccount}><Trash2 size={15} /> Delete account</button></section>

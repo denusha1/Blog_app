@@ -6,12 +6,14 @@ import com.blogapp.security.AppUserDetailsService;
 import com.blogapp.user.AppUser;
 import com.blogapp.user.UserDto;
 import com.blogapp.user.UserRepository;
+import java.util.List;
 import jakarta.transaction.Transactional;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.net.URI;
 
 @Service
 public class AuthService {
@@ -66,8 +68,11 @@ public class AuthService {
                 .ifPresent(other -> { throw ApiException.conflict("Username is already in use"); });
         users.findByEmailIgnoreCase(email).filter(other -> !other.getId().equals(user.getId()))
                 .ifPresent(other -> { throw ApiException.conflict("Email is already in use"); });
+        validateUrl(request.avatarUrl(),"Profile picture"); validateUrl(request.websiteUrl(),"Website"); validateUrls(request.socialLinks(),"Social links");
         user.setUsername(username);
         user.setEmail(email);
+        user.setBio(clean(request.bio())); user.setAvatarUrl(clean(request.avatarUrl()));
+        user.setWebsiteUrl(clean(request.websiteUrl())); user.setSocialLinks(clean(request.socialLinks()));
         return new AuthDtos.AuthResponse(jwt.issue(user.getUsername()), UserDto.from(user));
     }
 
@@ -92,4 +97,7 @@ public class AuthService {
     private AppUser findUser(String username) {
         return users.findByUsernameIgnoreCase(username).orElseThrow(() -> ApiException.notFound("Account not found"));
     }
+    private String clean(String value){return value==null||value.isBlank()?null:value.trim();}
+    private void validateUrls(String value,String label){if(value==null||value.isBlank())return;for(String url:value.split(","))validateUrl(url,label);}
+    private void validateUrl(String value,String label){if(value==null||value.isBlank())return;try{URI uri=URI.create(value.trim());if(!List.of("https","http").contains(uri.getScheme())||uri.getHost()==null)throw new IllegalArgumentException();}catch(RuntimeException ex){throw ApiException.badRequest(label+" must be a valid http or https URL");}}
 }

@@ -23,7 +23,8 @@ public final class PostDtos {
     public record PageResponse<T>(List<T> content, int page, int size, long totalElements, int totalPages) {}
     public record MonthCount(String month, long count) {}
     public record Stats(long totalPosts, long publishedPosts, long draftPosts, long scheduledPosts,
-                        List<MonthCount> monthlyPosts) {}
+                        List<MonthCount> monthlyPosts, long totalViews, long totalLikes, long totalComments,
+                        double engagementRate, List<MonthCount> monthlyViews, List<PostResponse> popularPosts) {}
     public record ReactionSummary(java.util.Map<String, Long> counts, String myReaction) {}
     public record CommentRequest(@NotBlank @Size(max=5000) String content, Long parentId) {}
     public record CommentResponse(Long id, String content, Long authorId, String authorName,

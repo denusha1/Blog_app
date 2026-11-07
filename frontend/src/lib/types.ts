@@ -3,7 +3,12 @@ export type User = {
   username: string;
   email: string;
   role: string;
+  enabled: boolean;
   createdAt: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  websiteUrl: string | null;
+  socialLinks: string | null;
 };
 
 export type Post = {
@@ -39,4 +44,10 @@ export type Stats = {
   draftPosts: number;
   scheduledPosts: number;
   monthlyPosts: { month: string; count: number }[];
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  engagementRate: number;
+  monthlyViews: { month: string; count: number }[];
+  popularPosts: Post[];
 };

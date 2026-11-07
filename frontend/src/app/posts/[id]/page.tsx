@@ -31,7 +31,7 @@ export default function StoryPage() {
   }
 
   if (error) return <main className="page-wrap"><div className="shell"><div className="form-error">{error}</div><Link href="/" className="read-link"><ArrowLeft size={15} /> Return to stories</Link></div></main>;
-  if (!post) return <main className="page-wrap"><div className="shell empty-state"><LoaderCircle size={22} className="animate-spin" /></div></main>;
+  if (!post) return <main className="page-wrap"><div className="shell story-skeleton"><div className="skeleton-line shimmer short"/><div className="skeleton-cover shimmer"/><div className="skeleton-line shimmer title"/><div className="skeleton-line shimmer medium"/><div className="skeleton-line shimmer"/><div className="skeleton-line shimmer"/><div className="skeleton-line shimmer medium"/></div></main>;
   const isAuthor = user?.id === post.authorId;
   const headings = post.content.split("\n").filter(line=>/^#{1,3}\s+/.test(line)).map(line=>{const title=line.replace(/^#+\s+/,"").trim();return {title,level:line.match(/^#+/)?.[0].length??1,id:title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-|-$/g,"")};});
   const readingMinutes=Math.max(1,Math.ceil(post.content.replace(/[#*`>_\-[\]()]/g," ").trim().split(/\s+/).length/220));
@@ -40,7 +40,7 @@ export default function StoryPage() {
     {post.imageUrl && <img className="story-cover" src={post.imageUrl} alt="" style={{ marginTop: 22 }} />}
     <h1 className="story-title">{post.title}</h1>
     <span className={`category-tag category-${(post.category || "Writing").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{post.category || "Writing"}</span>
-    <div className="story-meta"><span><UserRound size={14} /> {post.authorName}</span><span><CalendarDays size={14} /> {new Date(post.createdAt).toLocaleDateString(undefined, { dateStyle: "long" })}</span><span><Clock3 size={14}/> {readingMinutes} min read</span><span>{post.viewCount} reads</span>{post.status !== "PUBLISHED" && <span className={`post-status status-${post.status.toLowerCase()}`}>{post.status === "DRAFT" ? "Draft" : `Scheduled for ${new Date(post.scheduledAt ?? "").toLocaleString()}`}</span>}{post.visibility === "PRIVATE" && <span className="post-status status-private">Private</span>}</div>
+    <div className="story-meta"><Link href={`/authors/${post.authorId}`}><UserRound size={14} /> {post.authorName}</Link><span><CalendarDays size={14} /> {new Date(post.createdAt).toLocaleDateString(undefined, { dateStyle: "long" })}</span><span><Clock3 size={14}/> {readingMinutes} min read</span><span>{post.viewCount} reads</span>{post.status !== "PUBLISHED" && <span className={`post-status status-${post.status.toLowerCase()}`}>{post.status === "DRAFT" ? "Draft" : `Scheduled for ${new Date(post.scheduledAt ?? "").toLocaleString()}`}</span>}{post.visibility === "PRIVATE" && <span className="post-status status-private">Private</span>}</div>
     {headings.length>1 && <nav className="story-toc"><strong>In this article</strong>{headings.map((heading,index)=><a key={`${heading.id}-${index}`} style={{paddingLeft:(heading.level-1)*14}} href={`#${heading.id}`}>{heading.title}</a>)}</nav>}
     <div className="story-content"><MarkdownBody content={post.content} /></div>
     {post.status === "PUBLISHED" && post.visibility === "PUBLIC" && <PostSocial id={post.id} authorId={post.authorId}/>}

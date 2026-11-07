@@ -10,7 +10,8 @@ import org.springframework.stereotype.Service;
 public class AuthorFollowService {
     private final UserRepository users;
     private final AuthorFollowRepository follows;
-    public AuthorFollowService(UserRepository users, AuthorFollowRepository follows) { this.users=users; this.follows=follows; }
+    private final NotificationService notifications;
+    public AuthorFollowService(UserRepository users, AuthorFollowRepository follows, NotificationService notifications) { this.users=users; this.follows=follows; this.notifications=notifications; }
 
     public PostDtos.FollowState state(Long authorId, String followerUsername) {
         AppUser author=findUser(authorId);
@@ -23,7 +24,7 @@ public class AuthorFollowService {
     public PostDtos.FollowState follow(Long authorId,String followerUsername) {
         AppUser author=findUser(authorId); AppUser follower=findUser(followerUsername);
         if (author.getId().equals(follower.getId())) throw ApiException.badRequest("You cannot follow yourself");
-        if (follows.findByAuthorIdAndFollowerId(authorId,follower.getId()).isEmpty()) follows.save(new AuthorFollow(author,follower));
+        if (follows.findByAuthorIdAndFollowerId(authorId,follower.getId()).isEmpty()) { follows.save(new AuthorFollow(author,follower)); notifications.create(author,follower,null,"FOLLOW"); }
         return state(authorId,followerUsername);
     }
 

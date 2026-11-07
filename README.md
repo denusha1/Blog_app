@@ -45,3 +45,13 @@ Set `NEXT_PUBLIC_API_URL` if the API is not at `http://localhost:8080/api`. The 
 - Dashboard publishing chart with Recharts
 - PostgreSQL persistence and Swagger/OpenAPI docs
 - JUnit 5 and Mockito service tests
+
+## Community, analytics, and moderation
+
+- Author analytics for views, reactions, comments, engagement rate, popular articles, and monthly readership
+- Notifications for new likes, comments, follows, and posts from followed authors
+- Public author pages with profile image, bio, links, articles, and readership totals
+- Article reporting and admin tools for reviewing reports, moderating posts, managing categories, and enabling accounts
+- Draft assistant for title, tag, summary, grammar, and readability suggestions
+
+To grant an existing account administrator access, set `APP_ADMIN_EMAIL` to that account's email and restart the backend. The account must exist before the backend starts.

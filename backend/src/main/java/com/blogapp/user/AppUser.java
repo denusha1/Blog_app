@@ -19,6 +19,11 @@ public class AppUser {
     private String password;
     @Column(nullable = false, length = 20)
     private String role = "USER";
+    @Column(nullable=false) private boolean enabled=true;
+    @Column(length=500) private String bio;
+    @Column(length=1000) private String avatarUrl;
+    @Column(length=300) private String websiteUrl;
+    @Column(length=300) private String socialLinks;
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -38,5 +43,10 @@ public class AppUser {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
     public String getRole() { return role; }
+    public void setRole(String role){this.role=role;} public boolean isEnabled(){return enabled;} public void setEnabled(boolean enabled){this.enabled=enabled;}
+    public String getBio(){return bio;} public void setBio(String bio){this.bio=bio;}
+    public String getAvatarUrl(){return avatarUrl;} public void setAvatarUrl(String avatarUrl){this.avatarUrl=avatarUrl;}
+    public String getWebsiteUrl(){return websiteUrl;} public void setWebsiteUrl(String websiteUrl){this.websiteUrl=websiteUrl;}
+    public String getSocialLinks(){return socialLinks;} public void setSocialLinks(String socialLinks){this.socialLinks=socialLinks;}
     public Instant getCreatedAt() { return createdAt; }
 }

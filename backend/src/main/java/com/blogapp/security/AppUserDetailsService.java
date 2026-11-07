@@ -17,6 +17,6 @@ public class AppUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
         AppUser user = users.findByUsernameIgnoreCase(login).or(() -> users.findByEmailIgnoreCase(login))
                 .orElseThrow(() -> new UsernameNotFoundException("Account not found"));
-        return User.withUsername(user.getUsername()).password(user.getPassword()).roles(user.getRole()).build();
+        return User.withUsername(user.getUsername()).password(user.getPassword()).roles(user.getRole()).disabled(!user.isEnabled()).build();
     }
 }

@@ -3,6 +3,7 @@ package com.blogapp.post;
 import com.blogapp.common.ApiException;
 import com.blogapp.user.AppUser;
 import com.blogapp.user.UserRepository;
+import com.blogapp.user.NotificationService;
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,10 +19,11 @@ public class PostEngagementService {
     private final PostReactionRepository reactions;
     private final PostCommentRepository comments;
     private final PostBookmarkRepository bookmarks;
+    private final NotificationService notifications;
 
     public PostEngagementService(PostRepository posts, UserRepository users, PostReactionRepository reactions,
-                                 PostCommentRepository comments, PostBookmarkRepository bookmarks) {
-        this.posts=posts; this.users=users; this.reactions=reactions; this.comments=comments; this.bookmarks=bookmarks;
+                                 PostCommentRepository comments, PostBookmarkRepository bookmarks, NotificationService notifications) {
+        this.posts=posts; this.users=users; this.reactions=reactions; this.comments=comments; this.bookmarks=bookmarks; this.notifications=notifications;
     }
 
     public PostDtos.ReactionSummary reactionSummary(Long postId, String username) {
@@ -44,7 +46,8 @@ public class PostEngagementService {
         if (!REACTION_TYPES.contains(normalized)) throw ApiException.badRequest("Choose a supported reaction");
         AppUser user=findUser(username);
         PostReaction reaction=reactions.findByPostIdAndUserId(postId,user.getId()).orElse(null);
-        if (reaction == null) reactions.save(new PostReaction(post,user,normalized)); else reaction.setType(normalized);
+        if (reaction == null) { reactions.save(new PostReaction(post,user,normalized)); if(normalized.equals("LIKE")) notifications.create(post.getAuthor(),user,post,"LIKE"); }
+        else reaction.setType(normalized);
         return reactionSummary(postId,username);
     }
 
@@ -74,6 +77,7 @@ public class PostEngagementService {
             if (parent.isDeleted()) throw ApiException.badRequest("You cannot reply to a deleted comment");
         }
         PostComment saved=comments.save(new PostComment(post,author,parent,request.content().trim()));
+        notifications.create(post.getAuthor(),author,post,"COMMENT");
         return commentDto(saved,Map.of());
     }
 

@@ -6,6 +6,8 @@ services:
       POSTGRES_DB: blogapp
       POSTGRES_USER: blogapp
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blogapp-local}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +24,8 @@ services:
       DATABASE_USERNAME: blogapp
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-blogapp-local}
       JWT_SECRET: ${JWT_SECRET:-local-compose-secret-change-this-before-deploy-0123456789}
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      APP_SEED_SAMPLE_DATA: ${APP_SEED_SAMPLE_DATA:-false}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
