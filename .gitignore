@@ -1,1 +1,6 @@
 .env
+database/*.sqlite
+database/*.sqlite-*
+node_modules/
+frontend/.next/
+backend/target/

@@ -66,6 +66,8 @@ define('DB_USER', env('DB_USER', ''));
 define('DB_PASS', env('DB_PASS', ''));
 define('DB_PORT', env('DB_PORT', '3306'));
 define('DB_CHARSET', env('DB_CHARSET', 'utf8mb4'));
+define('DB_DRIVER', env('DB_DRIVER', 'mysql'));
+define('DB_PATH', env('DB_PATH', ''));
 
 // Security configuration
 define('CSRF_TOKEN_NAME', env('CSRF_TOKEN_NAME', 'csrf_token'));
@@ -79,13 +81,23 @@ function getDBConnection() {
     
     if ($pdo === null) {
         try {
-            $dsn = "mysql:host=".DB_HOST.";port=".DB_PORT.";dbname=".DB_NAME.";charset=".DB_CHARSET;
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
             ];
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+
+            if (DB_DRIVER === 'sqlite') {
+                if (DB_PATH === '') {
+                    throw new RuntimeException('DB_PATH must be set when DB_DRIVER=sqlite');
+                }
+                $pdo = new PDO('sqlite:' . DB_PATH, null, null, $options);
+            } elseif (DB_DRIVER === 'mysql') {
+                $dsn = "mysql:host=".DB_HOST.";port=".DB_PORT.";dbname=".DB_NAME.";charset=".DB_CHARSET;
+                $options[PDO::ATTR_EMULATE_PREPARES] = false;
+                $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+            } else {
+                throw new RuntimeException('Unsupported database driver: ' . DB_DRIVER);
+            }
         } catch (PDOException $e) {
             // Show full error with line number
             die("⚠️ Database Connection Failed: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());

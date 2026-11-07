@@ -120,7 +120,7 @@ function createBlogPost($input = null) {
         $user = getCurrentUser();
         
         // Insert new blog post
-        $stmt = $pdo->prepare("INSERT INTO blog_posts (user_id, title, content, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
+        $stmt = $pdo->prepare("INSERT INTO blog_posts (user_id, title, content, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
         $stmt->execute([$user['id'], $title, $content]);
         
         $postId = $pdo->lastInsertId();
@@ -319,7 +319,7 @@ function updateBlogPost($input = null) {
         }
         
         // Update blog post
-        $stmt = $pdo->prepare("UPDATE blog_posts SET title = ?, content = ?, updated_at = NOW() WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE blog_posts SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
         $stmt->execute([$title, $content, $postId]);
         
         sendJSONResponse([
