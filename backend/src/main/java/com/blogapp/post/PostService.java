@@ -5,6 +5,10 @@ import com.blogapp.user.AppUser;
 import com.blogapp.user.UserRepository;
 import jakarta.transaction.Transactional;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -15,18 +19,55 @@ public class PostService {
     private final UserRepository users;
     public PostService(PostRepository posts, UserRepository users) { this.posts = posts; this.users = users; }
 
-    public PostDtos.PageResponse<PostDtos.PostResponse> list(String query, String category, int page, int size) {
+    public PostDtos.PageResponse<PostDtos.PostResponse> list(String query, String category, String tag, String author,
+            Instant fromDate, Instant toDate, String sort, int page, int size) {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(50, Math.max(1, size));
-        Page<BlogPost> result = posts.search(query == null ? "" : query.trim(),
-                category == null ? "" : category.trim(), PageRequest.of(safePage, safeSize));
+        PageRequest pageable = PageRequest.of(safePage, safeSize);
+        String normalizedQuery = query == null ? "" : query.trim();
+        String normalizedCategory = category == null ? "" : category.trim();
+        String normalizedTag = tag == null ? "" : tag.trim();
+        String normalizedAuthor = author == null ? "" : author.trim();
+        Instant safeFrom = fromDate == null ? Instant.parse("0001-01-01T00:00:00Z") : fromDate;
+        Instant safeTo = toDate == null ? Instant.parse("9999-12-31T23:59:59Z") : toDate;
+        Page<BlogPost> result = "trending".equalsIgnoreCase(sort)
+                ? posts.searchTrending(normalizedQuery, normalizedCategory, normalizedTag, normalizedAuthor, safeFrom, safeTo, pageable)
+                : posts.search(normalizedQuery, normalizedCategory, normalizedTag, normalizedAuthor, safeFrom, safeTo, pageable);
         return new PostDtos.PageResponse<>(result.getContent().stream().map(PostDtos.PostResponse::from).toList(),
                 result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
-    public PostDtos.PostResponse get(Long id) {
-        return posts.findDetailedById(id).map(PostDtos.PostResponse::from)
+    public PostDtos.PostResponse get(Long id, String requestingUsername) {
+        BlogPost post = posts.findDetailedById(id).orElseThrow(() -> ApiException.notFound("Post not found"));
+        boolean publicPost = post.getStatus().equals("PUBLISHED") && post.getVisibility().equals("PUBLIC") &&
+                (post.getPublishedAt() == null || !post.getPublishedAt().isAfter(java.time.Instant.now()));
+        boolean owner = requestingUsername != null && post.getAuthor().getUsername().equalsIgnoreCase(requestingUsername);
+        if (!publicPost && !owner) throw ApiException.notFound("Post not found");
+        return PostDtos.PostResponse.from(post);
+    }
+
+    public List<PostDtos.PostResponse> trending() {
+        return posts.findTrending(PageRequest.of(0, 6)).stream().map(PostDtos.PostResponse::from).toList();
+    }
+
+    public List<PostDtos.PostResponse> latest() {
+        return posts.findLatest(PageRequest.of(0, 6)).stream().map(PostDtos.PostResponse::from).toList();
+    }
+
+    public List<PostDtos.PostResponse> related(Long id) {
+        BlogPost post = posts.findDetailedById(id).filter(this::isPublicPost)
                 .orElseThrow(() -> ApiException.notFound("Post not found"));
+        return posts.findRelated(id, post.getCategory(), post.getAuthor().getId(), PageRequest.of(0, 3))
+                .stream().map(PostDtos.PostResponse::from).toList();
+    }
+
+    public List<String> publicTags() { return posts.findPublicTags(); }
+
+    @Transactional
+    public void recordView(Long id) {
+        BlogPost post = posts.findDetailedById(id).filter(this::isPublicPost)
+                .orElseThrow(() -> ApiException.notFound("Post not found"));
+        post.recordView();
     }
 
     public List<PostDtos.PostResponse> mine(String username) {
@@ -39,20 +80,26 @@ public class PostService {
         List<PostDtos.MonthCount> months = posts.monthlyPostCounts(author.getId()).stream()
                 .map(row -> new PostDtos.MonthCount((String) row[0], ((Number) row[1]).longValue())).toList();
         long count = posts.countByAuthorId(author.getId());
-        return new PostDtos.Stats(count, count, months);
+        return new PostDtos.Stats(count, posts.countByAuthorIdAndStatus(author.getId(), "PUBLISHED"),
+                posts.countByAuthorIdAndStatus(author.getId(), "DRAFT"),
+                posts.countByAuthorIdAndStatus(author.getId(), "SCHEDULED"), months);
     }
 
     @Transactional
     public PostDtos.PostResponse create(String username, PostDtos.SaveRequest request) {
         AppUser author = user(username);
-        BlogPost saved = posts.save(new BlogPost(author, request.title().trim(), request.content().trim(), request.category(), request.imageUrl()));
+        validateSaveRequest(request);
+        BlogPost saved = posts.save(new BlogPost(author, request.title().trim(), request.content().trim(), request.category(),
+                request.imageUrl(), normalizeTags(request.tags()), request.status(), request.visibility(), request.featured(), request.scheduledAt()));
         return PostDtos.PostResponse.from(saved);
     }
 
     @Transactional
     public PostDtos.PostResponse update(String username, Long id, PostDtos.SaveRequest request) {
         BlogPost post = ownedPost(username, id);
-        post.update(request.title().trim(), request.content().trim(), request.category(), request.imageUrl());
+        validateSaveRequest(request);
+        post.update(request.title().trim(), request.content().trim(), request.category(), request.imageUrl(), normalizeTags(request.tags()),
+                request.status(), request.visibility(), request.featured(), request.scheduledAt());
         return PostDtos.PostResponse.from(post);
     }
 
@@ -63,6 +110,42 @@ public class PostService {
         BlogPost post = posts.findDetailedById(id).orElseThrow(() -> ApiException.notFound("Post not found"));
         if (!post.getAuthor().getUsername().equalsIgnoreCase(username)) throw ApiException.forbidden("You cannot change another author's post");
         return post;
+    }
+
+    @Transactional
+    public int publishScheduledPosts() {
+        List<BlogPost> ready = posts.findScheduledToPublish(java.time.Instant.now());
+        ready.forEach(BlogPost::publishScheduled);
+        return ready.size();
+    }
+
+    private void validateSaveRequest(PostDtos.SaveRequest request) {
+        String status = request.status() == null ? "PUBLISHED" : request.status().toUpperCase();
+        String visibility = request.visibility() == null ? "PUBLIC" : request.visibility().toUpperCase();
+        if (!List.of("DRAFT", "SCHEDULED", "PUBLISHED").contains(status)) {
+            throw ApiException.badRequest("Choose draft, scheduled, or published");
+        }
+        if (!List.of("PUBLIC", "PRIVATE").contains(visibility)) {
+            throw ApiException.badRequest("Choose public or private visibility");
+        }
+        if (status.equals("SCHEDULED") && (request.scheduledAt() == null || !request.scheduledAt().isAfter(java.time.Instant.now()))) {
+            throw ApiException.badRequest("Choose a future publishing date and time");
+        }
+        if (request.tags() != null && request.tags().size() > 8) throw ApiException.badRequest("Choose up to 8 tags");
+        if (request.tags() != null && request.tags().stream().anyMatch(tag -> tag == null || tag.trim().isEmpty() || tag.trim().length() > 40)) {
+            throw ApiException.badRequest("Each tag must contain 1 to 40 characters");
+        }
+    }
+
+    private Set<String> normalizeTags(Set<String> tags) {
+        if (tags == null) return Set.of();
+        return tags.stream().map(tag -> tag.trim().replaceFirst("^#", "").toLowerCase(Locale.ROOT))
+                .filter(tag -> !tag.isBlank()).collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+    }
+
+    private boolean isPublicPost(BlogPost post) {
+        return post.getStatus().equals("PUBLISHED") && post.getVisibility().equals("PUBLIC") &&
+                (post.getPublishedAt() == null || !post.getPublishedAt().isAfter(Instant.now()));
     }
 
     private AppUser user(String username) {

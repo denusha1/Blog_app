@@ -38,7 +38,9 @@ Set `NEXT_PUBLIC_API_URL` if the API is not at `http://localhost:8080/api`. The 
 
 - Public story feed with search and pagination
 - Account registration, login, profile editing and password changes
-- JWT-protected writing dashboard and author-only post editing/deletion
+- JWT-protected writing dashboard with Markdown editor, formatting tools, safe preview, and auto-saved drafts
+- Draft, scheduled, published, featured, public, and private post management
+- Automatic scheduled publishing and author-only editing/deletion
 - Optional Cloudinary cover-image uploads
 - Dashboard publishing chart with Recharts
 - PostgreSQL persistence and Swagger/OpenAPI docs

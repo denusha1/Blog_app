@@ -37,6 +37,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/posts/mine", "/api/posts/stats").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/authors/following").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/authors/*/follow").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/posts/trending", "/api/posts/latest", "/api/posts/tags", "/api/posts/*/related").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/posts/*/view").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/posts/*/comments", "/api/posts/*/reactions").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/*").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

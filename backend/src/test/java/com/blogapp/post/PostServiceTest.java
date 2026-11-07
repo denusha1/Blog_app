@@ -22,11 +22,11 @@ class PostServiceTest {
     @Test
     void rejectsEditingAnotherAuthorsPost() {
         AppUser owner = new AppUser("owner", "owner@example.com", "hash");
-        BlogPost post = new BlogPost(owner, "Title", "Content", "Writing", null);
+        BlogPost post = new BlogPost(owner, "Title", "Content", "Writing", null, java.util.Set.of(), "PUBLISHED", "PUBLIC", false, null);
         when(posts.findDetailedById(5L)).thenReturn(Optional.of(post));
 
         assertThatThrownBy(() -> service.update("someone-else", 5L,
-                new PostDtos.SaveRequest("Changed", "Content", "Writing", null)))
+                new PostDtos.SaveRequest("Changed", "Content", "Writing", null, java.util.Set.of(), "PUBLISHED", "PUBLIC", false, null)))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("another author's post");
     }

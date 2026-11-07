@@ -13,7 +13,7 @@ export function Navbar() {
         <Link href="/" className="brand"><span className="brand-icon"><BookOpen size={20} /></span> Ink &amp; Ideas</Link>
         <nav className="nav-links">
           <Link href="/">Discover</Link>
-          {user && <Link href="/dashboard">Dashboard</Link>}
+          {user && <><Link href="/dashboard">Dashboard</Link><Link href="/bookmarks">Bookmarks</Link><Link href="/following">Following</Link></>}
         </nav>
         <div className="nav-actions">
           <ThemeToggle />

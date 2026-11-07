@@ -3,10 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Search, Sparkles } from "lucide-react";
-import { getPosts } from "@/lib/api";
+import { getPosts, getTrendingPosts, getLatestPosts, getPublicTags } from "@/lib/api";
 import { PostCard, PostSkeleton } from "@/components/post-card";
 import { useAuth } from "@/components/providers";
 import type { PostPage } from "@/lib/types";
+
+function DiscoveryRow({ title, posts }: { title: string; posts: import("@/lib/types").Post[] }) {
+  if (!posts.length) return null;
+  return <section className="discovery-row"><h3>{title}</h3><div className="discovery-list">{posts.slice(0, 4).map(post => <Link key={post.id} href={`/posts/${post.id}`}><strong>{post.title}</strong><span>{post.authorName} · {post.viewCount ?? 0} reads</span></Link>)}</div></section>;
+}
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -17,13 +22,23 @@ export default function HomePage() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sort, setSort] = useState("latest");
+  const [tag, setTag] = useState("");
+  const [author, setAuthor] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [trending, setTrending] = useState<import("@/lib/types").Post[]>([]);
+  const [latest, setLatest] = useState<import("@/lib/types").Post[]>([]);
 
   useEffect(() => {
     setLoading(true);
     setError("");
-    getPosts(submittedQuery, page, category).then(setData).catch((reason: Error) => setError(reason.message))
+    getPosts({ query: submittedQuery, page, category, tag, author, from, to, sort }).then(setData).catch((reason: Error) => setError(reason.message))
       .finally(() => setLoading(false));
-  }, [submittedQuery, page, category]);
+  }, [submittedQuery, page, category, tag, author, from, to, sort]);
+
+  useEffect(() => { getPublicTags().then(setTags).catch(() => {}); getTrendingPosts().then(setTrending).catch(() => {}); getLatestPosts().then(setLatest).catch(() => {}); }, []);
 
   function search(event: React.FormEvent) {
     event.preventDefault();
@@ -49,6 +64,8 @@ export default function HomePage() {
         <form className="search-box" onSubmit={search}><Search size={17} /><input aria-label="Search stories" placeholder="Search stories..." value={query} onChange={event => setQuery(event.target.value)} /></form>
       </div>
       <div className="category-filter" aria-label="Filter by category">{["", "Ideas", "Design", "Culture", "Travel", "Life", "Writing"].map(item => <button key={item || "all"} className={category === item ? "filter-chip active" : "filter-chip"} aria-pressed={category === item} onClick={() => { setPage(0); setCategory(item); }}>{item || "Everything"}</button>)}</div>
+      <div className="discovery-filters"><select aria-label="Sort stories" value={sort} onChange={e => setSort(e.target.value)}><option value="latest">Latest</option><option value="trending">Trending</option></select><select aria-label="Filter by tag" value={tag} onChange={e => setTag(e.target.value)}><option value="">All tags</option>{tags.map(value => <option key={value}>{value}</option>)}</select><input aria-label="Author username" placeholder="Author username" value={author} onChange={e => setAuthor(e.target.value)} /><label>From <input type="date" value={from} onChange={e => setFrom(e.target.value)} /></label><label>To <input type="date" value={to} onChange={e => setTo(e.target.value)} /></label></div>
+      {!submittedQuery && !tag && !author && !from && !to && <><DiscoveryRow title="Trending this week" posts={trending} /><DiscoveryRow title="Latest articles" posts={latest} /></>}
       {loading ? <div className="post-grid">{Array.from({ length: 6 }, (_, index) => <PostSkeleton key={index} />)}</div> : error ?
         <div className="form-error">{error}</div> : data?.content.length ? <>
           <div className="post-grid">{data.content.map(post => <PostCard key={post.id} post={post} />)}</div>

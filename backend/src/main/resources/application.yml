@@ -20,6 +20,8 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 app:
+  posts:
+    schedule-check-ms: ${POST_SCHEDULE_CHECK_MS:30000}
   jwt:
     secret: ${JWT_SECRET:local-development-secret-change-this-before-deploy-1234567890}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}

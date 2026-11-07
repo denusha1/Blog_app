@@ -26,8 +26,22 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export type AuthResponse = { token: string; user: User };
 
-export const getPosts = (query = "", page = 0, category = "") =>
-  api<PostPage>(`/posts?query=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}&page=${page}&size=9`);
+export type PostFilters = { query?: string; page?: number; category?: string; tag?: string; author?: string; from?: string; to?: string; sort?: string };
+export const getPosts = (filters: PostFilters = {}) => {
+  const params = new URLSearchParams();
+  params.set("query", filters.query ?? ""); params.set("category", filters.category ?? "");
+  params.set("tag", filters.tag ?? ""); params.set("author", filters.author ?? "");
+  params.set("page", String(filters.page ?? 0)); params.set("size", "9"); params.set("sort", filters.sort ?? "latest");
+  if (filters.from) params.set("from", new Date(filters.from).toISOString());
+  if (filters.to) params.set("to", new Date(`${filters.to}T23:59:59`).toISOString());
+  return api<PostPage>(`/posts?${params.toString()}`);
+};
 export const getPost = (id: string) => api<Post>(`/posts/${id}`);
 export const getMyPosts = () => api<Post[]>("/posts/mine");
 export const getStats = () => api<Stats>("/posts/stats");
+export const getTrendingPosts = () => api<Post[]>("/posts/trending");
+export const getLatestPosts = () => api<Post[]>("/posts/latest");
+export const getPublicTags = () => api<string[]>("/posts/tags");
+export const getRelatedPosts = (id: string) => api<Post[]>(`/posts/${id}/related`);
+export const getBookmarks = () => api<Post[]>("/bookmarks");
+export const getFollowing = () => api<{ id: number; username: string; followedAt: string }[]>("/authors/following");

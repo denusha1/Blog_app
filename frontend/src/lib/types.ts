@@ -12,6 +12,13 @@ export type Post = {
   content: string;
   category: string;
   imageUrl: string | null;
+  tags: string[];
+  status: "DRAFT" | "SCHEDULED" | "PUBLISHED";
+  visibility: "PUBLIC" | "PRIVATE";
+  featured: boolean;
+  viewCount: number;
+  scheduledAt: string | null;
+  publishedAt: string | null;
   authorId: number;
   authorName: string;
   createdAt: string;
@@ -29,5 +36,7 @@ export type PostPage = {
 export type Stats = {
   totalPosts: number;
   publishedPosts: number;
+  draftPosts: number;
+  scheduledPosts: number;
   monthlyPosts: { month: string; count: number }[];
 };
