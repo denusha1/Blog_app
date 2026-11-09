@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: blogapp
       POSTGRES_USER: blogapp
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blogapp-local}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -22,29 +22,40 @@ services:
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/blogapp
       DATABASE_USERNAME: blogapp
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-blogapp-local}
-      JWT_SECRET: ${JWT_SECRET:-local-compose-secret-change-this-before-deploy-0123456789}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      APP_SEED_SAMPLE_DATA: ${APP_SEED_SAMPLE_DATA:-false}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      FRONTEND_URL: ${FRONTEND_URL:?Set FRONTEND_URL in .env}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
+      APP_SEED_SAMPLE_DATA: ${APP_SEED_SAMPLE_DATA:-true}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
 
   frontend:
     build:
       context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:8080/api
     restart: unless-stopped
+    environment:
+      BLOG_API_PROXY_URL: http://api:8080/api
+      BLOG_CONTACT_API_PROXY_URL: http://api:8080/api
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   postgres_data:

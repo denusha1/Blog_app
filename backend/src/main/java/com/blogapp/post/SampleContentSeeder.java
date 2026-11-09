@@ -67,6 +67,16 @@ public class SampleContentSeeder implements ApplicationRunner {
 
                 You may bring home fewer photographs, but more memories that feel like yours.
                 """),
+            post(author,"The Stories We Carry From Home","Culture","photo-1511895426328-dc8714191300",false,
+                "culture, memory, belonging", """
+                ## Memory is a living archive
+
+                Culture often reaches us through small rituals: a dish made without a recipe, a phrase that only makes sense at home, or a song that changes the mood of a whole room. These details hold stories about where we come from and how we learned to belong.
+
+                As we move through different places and seasons of life, familiar traditions can change. We choose what to carry forward, what to share, and what new meanings to make together.
+
+                Ask someone you love about an ordinary family ritual. The answer may reveal a history neither of you had named before.
+                """),
             post(author,"Make Room for a Daily Writing Practice","Writing","photo-1455390582262-044cdead277a",false,
                 "writing, habits, creativity", """
                 ## Start smaller than your ambition

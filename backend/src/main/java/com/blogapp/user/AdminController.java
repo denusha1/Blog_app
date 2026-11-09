@@ -1,6 +1,8 @@
 package com.blogapp.user;
 
 import com.blogapp.common.ApiException;
+import com.blogapp.contact.ContactMessage;
+import com.blogapp.contact.ContactMessageRepository;
 import com.blogapp.post.*;
 import jakarta.transaction.Transactional;
 import java.util.List;
@@ -11,8 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/api/admin") @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
-    private final UserRepository users;private final PostRepository posts;private final PostReactionRepository reactions;private final ContentReportRepository reports;
-    public AdminController(UserRepository users,PostRepository posts,PostReactionRepository reactions,ContentReportRepository reports){this.users=users;this.posts=posts;this.reactions=reactions;this.reports=reports;}
+    private final UserRepository users;private final PostRepository posts;private final PostReactionRepository reactions;private final ContentReportRepository reports;private final ContactMessageRepository contacts;
+    public AdminController(UserRepository users,PostRepository posts,PostReactionRepository reactions,ContentReportRepository reports,ContactMessageRepository contacts){this.users=users;this.posts=posts;this.reactions=reactions;this.reports=reports;this.contacts=contacts;}
     @GetMapping("/users") public List<UserDto> users(){return users.findAll().stream().map(UserDto::from).toList();}
     @PatchMapping("/users/{id}") @Transactional public UserDto updateUser(@PathVariable Long id,@RequestBody UserUpdate request,@AuthenticationPrincipal UserDetails principal){
         AppUser user=users.findById(id).orElseThrow(()->ApiException.notFound("User not found"));
@@ -34,10 +36,13 @@ public class AdminController {
     @GetMapping("/categories") public List<String> categories(){return posts.allCategories();}
     @GetMapping("/reports") @Transactional public List<ReportResponse> reports(){return reports.findForModeration().stream().map(r->new ReportResponse(r.getId(),r.getPost().getId(),r.getPost().getTitle(),r.getPost().getAuthor().getUsername(),r.getReporter().getUsername(),r.getReason(),r.isResolved(),r.getCreatedAt())).toList();}
     @PatchMapping("/reports/{id}/resolve") @Transactional public void resolve(@PathVariable Long id){reports.findById(id).orElseThrow(()->ApiException.notFound("Report not found")).resolve();}
+    @GetMapping("/contacts") public List<ContactResponse> contacts(){return contacts.findAllByOrderByCreatedAtDesc().stream().map(m->new ContactResponse(m.getId(),m.getName(),m.getEmail(),m.getMessage(),m.isRead(),m.getCreatedAt())).toList();}
+    @PatchMapping("/contacts/{id}/read") @Transactional public void markContactRead(@PathVariable Long id){contacts.findById(id).orElseThrow(()->ApiException.notFound("Contact message not found")).markRead();}
     @GetMapping("/analytics") public PlatformAnalytics analytics(){return new PlatformAnalytics(users.count(),posts.count(),posts.totalPlatformViews(),reactions.totalReactions(),reports.count());}
     public record UserUpdate(String role,Boolean enabled){}
     public record Moderation(Boolean approved,String category){}
     public record CategoryUpdate(String category){}
     public record ReportResponse(Long id,Long postId,String postTitle,String author,String reporter,String reason,boolean resolved,java.time.Instant createdAt){}
+    public record ContactResponse(Long id,String name,String email,String message,boolean read,java.time.Instant createdAt){}
     public record PlatformAnalytics(long users,long articles,long views,long reactions,long reports){}
 }

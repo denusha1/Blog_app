@@ -20,7 +20,7 @@ export default function StoryPage() {
   const [progress, setProgress] = useState(0);
   const [related, setRelated] = useState<Post[]>([]);
 
-  useEffect(() => { getPost(id).then(setPost).catch((reason: Error) => setError(reason.message)); getRelatedPosts(id).then(setRelated).catch(() => {}); api<void>(`/posts/${id}/view`,{method:"POST"}).catch(()=>{}); }, [id]);
+  useEffect(() => { getPost(id).then(post=>{setPost(post);try{const key="ink-reading-history";const previous=JSON.parse(localStorage.getItem(key)||"[]") as {id:string;at:number}[];const next=[{id,at:Date.now()},...previous.filter(entry=>entry.id!==id)].slice(0,30);localStorage.setItem(key,JSON.stringify(next));}catch{}}).catch((reason: Error) => setError(reason.message)); getRelatedPosts(id).then(setRelated).catch(() => {}); api<void>(`/posts/${id}/view`,{method:"POST"}).catch(()=>{}); }, [id]);
   useEffect(() => { const update=()=>{const el=document.querySelector(".story-content"); if(!el)return; const max=el.scrollHeight-window.innerHeight; const value=max<=0?100:Math.min(100,Math.max(0,Math.round((-el.getBoundingClientRect().top/max)*100))); setProgress(value); try{localStorage.setItem(`reading-${id}`,String(value));}catch{}}; window.addEventListener("scroll",update,{passive:true}); update(); return()=>window.removeEventListener("scroll",update); },[id,post]);
 
   async function remove() {

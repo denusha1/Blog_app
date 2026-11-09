@@ -2,22 +2,43 @@
 
 A full-stack blogging app built with Next.js, React, Tailwind CSS, Spring Boot, Java, PostgreSQL, Spring Security and JWT.
 
-## Run with Docker
+## Run locally with Docker
 
-1. Copy `.env.example` to `.env` and set a long random `JWT_SECRET`. Add Cloudinary credentials if you want cover image uploads.
+1. Copy `.env.example` to `.env` and set unique values for `POSTGRES_PASSWORD` and `JWT_SECRET`. Generate secrets with `openssl rand -hex 32`. For local use, set `FRONTEND_URL=http://localhost:3000`.
 2. Start the app:
 
    ```sh
-   docker compose up --build
+   docker compose up --build -d
    ```
 
-3. Open the web app at [http://localhost:3000](http://localhost:3000). The API is at [http://localhost:8080](http://localhost:8080), with interactive API docs at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html).
+3. Open [http://localhost:3000](http://localhost:3000). The API and database stay on the private Compose network. The API health check must pass before the frontend starts. Sample articles are seeded on an empty database by default; set `APP_SEED_SAMPLE_DATA=false` to disable this.
 
-PostgreSQL data is stored in the `postgres_data` Docker volume. Hibernate creates and updates the tables on startup.
+PostgreSQL data is stored in the persistent `postgres_data` Docker volume. The database port is bound to localhost only. Do not commit `.env` or share its secrets.
+
+## Host on a Docker server
+
+The Compose setup is prepared for a Linux VPS or another Docker host. It exposes the frontend on `FRONTEND_PORT` (default `3000`); the API and database are private to the Compose network. Put an HTTPS reverse proxy such as Caddy or Nginx in front of the frontend, and allow public inbound traffic only on ports `80` and `443`.
+
+1. Point your domain’s DNS A/AAAA record at the server.
+2. Copy `.env.example` to `.env`. Set a unique database password, a JWT secret generated with `openssl rand -hex 32`, `FRONTEND_URL=https://your-domain`, and optionally `APP_ADMIN_EMAIL`.
+3. Start and verify the services:
+
+   ```sh
+   docker compose up --build -d
+   docker compose ps
+   docker compose logs -f api frontend
+   ```
+
+4. Configure your HTTPS proxy to forward the domain to `http://127.0.0.1:3000`. If another app uses that port, set `FRONTEND_PORT` to a free host port and point the proxy there.
+5. Register the intended administrator account. Set `APP_ADMIN_EMAIL` to that account’s email in `.env`, then restart the API with `docker compose up -d api`.
+
+Set `APP_SEED_SAMPLE_DATA=false` if you want a blank production library. Add Cloudinary credentials to `.env` to enable cover image uploads. Store backups of the `postgres_data` volume off-server and test restoring one before relying on production data.
+
+The browser talks to the same-origin `/blog-api` route. Next.js forwards requests to the API over the private Docker network, so production builds never call a visitor’s `localhost`.
 
 ## Run without Docker
 
-Start a local PostgreSQL database named `blogapp`, then run the API:
+Start a local PostgreSQL database named `blogapp`, then run the API with explicit local development values:
 
 ```sh
 cd backend
@@ -32,7 +53,7 @@ npm install
 npm run dev
 ```
 
-Set `NEXT_PUBLIC_API_URL` if the API is not at `http://localhost:8080/api`. The backend accepts `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` for image uploads.
+The frontend’s server-side `/blog-api` proxy defaults to `http://localhost:8081/api` for the local setup used by this project. Set `BLOG_API_PROXY_URL` and `BLOG_CONTACT_API_PROXY_URL` if your API is elsewhere. The backend accepts `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` for image uploads.
 
 ## Features
 

@@ -1,0 +1,4 @@
+import Link from "next/link";
+import { BookOpen } from "lucide-react";
+
+export function SiteFooter(){return <footer className="site-footer"><div className="shell site-footer-inner"><Link className="footer-brand" href="/"><span className="brand-icon"><BookOpen size={17}/></span> Ink &amp; Ideas</Link><p>A quiet corner of the internet for curious minds.</p><nav aria-label="Footer navigation"><Link href="/explore">Explore</Link><Link href="/bookmarks">Bookmarks</Link><Link href="/history">Reading history</Link><Link href="/about">About</Link><Link href="/help">Help &amp; FAQ</Link><Link href="/contact">Contact</Link></nav><div className="footer-legal"><span>© {new Date().getFullYear()} Ink &amp; Ideas</span><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></div></div></footer>}

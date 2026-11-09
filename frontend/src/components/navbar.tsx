@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Bell, BookOpen, Compass, Home, LogOut, PenLine, UserPlus, UserRound } from "lucide-react";
 import {usePathname} from "next/navigation";
 import { useAuth } from "@/components/providers";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {api,getNotifications,getUnreadNotificationCount,type NotificationItem} from "@/lib/api";
 
 export function Navbar() {
@@ -24,10 +23,10 @@ export function Navbar() {
         <Link href="/" className="brand"><span className="brand-icon"><BookOpen size={20} /></span> Ink &amp; Ideas</Link>
         <nav className="nav-links">
           <Link href="/">Discover</Link>
-          {user && <><Link href="/dashboard">Dashboard</Link><Link href="/bookmarks">Bookmarks</Link><Link href="/following">Following</Link>{user.role === "ADMIN" && <Link href="/admin">Admin</Link>}</>}
+          <Link href="/explore">Explore</Link>
+          {user && <><Link href="/dashboard">Dashboard</Link><Link href="/bookmarks">Bookmarks</Link><Link href="/history">History</Link><Link href="/following">Following</Link>{user.role === "ADMIN" && <Link href="/admin">Admin</Link>}</>}
         </nav>
         <div className="nav-actions">
-          <ThemeToggle />
           {user ? <>
             <div className="notification-menu"><button className="notification-trigger" type="button" aria-label={`Notifications${unread?`, ${unread} unread`:""}`} aria-expanded={noticeOpen} onClick={toggleNotifications}><Bell size={18}/>{unread>0&&<span>{unread>99?"99+":unread}</span>}</button>{noticeOpen&&<section className="notification-dropdown"><div className="notification-dropdown-head"><strong>Notifications</strong><button onClick={markNotificationsRead} disabled={!unread}>Mark read</button></div>{recent.length?recent.map(item=><Link href={item.postId?`/posts/${item.postId}`:"/notifications"} onClick={()=>setNoticeOpen(false)} className={item.readAt?"notification-preview":"notification-preview unread"} key={item.id}><span><b>{item.actorName}</b> {item.type==="LIKE"?"liked your story":item.type==="COMMENT"?"commented on your story":item.type==="FOLLOW"?"followed you":"published a new article"}</span><small>{item.postTitle||new Date(item.createdAt).toLocaleDateString()}</small></Link>):<div className="notification-dropdown-empty">You’re all caught up.</div>}<Link href="/notifications" className="notification-dropdown-all" onClick={()=>setNoticeOpen(false)}>View all activity</Link></section>}</div>
             <Link href="/posts/new" className="button button-dark button-small"><PenLine size={15} /> Write</Link>
